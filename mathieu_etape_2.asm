@@ -149,18 +149,18 @@ calculer_orientation:
     sub r9d, esi        ; r9d = Cy - Ay
     
     ; Calcule (Bx-Ax) * (Cy-Ay)
-    movsx rdx, dx
-    movsx rbx, r9w
+    movsx rdx, edx   
+    movsx rbx, r9d
     imul rdx, rbx
     
     ; Calcule (By-Ay) * (Cx-Ax)
-    movsx rsi, cx
-    movsx rcx, r8w
+    movsx rsi, ecx
+    movsx rcx, r8d
     imul rcx, rsi
     
     ; Calcule le résultat final : (Bx-Ax)*(Cy-Ay) - (By-Ay)*(Cx-Ax)
     sub rdx, rcx
-    movsx eax, dx
+    mov eax, edx        ; Résultat dans eax
     
     ret
 

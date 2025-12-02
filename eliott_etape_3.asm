@@ -28,7 +28,7 @@ extern exit
 %define DWORD	4
 %define WORD	2
 %define BYTE	1
-%define NBTRI	3
+%define NBTRI	10	; nobre de triangles genere
 %define BYTE	1
 %define	LARGEUR 400	; largeur en pixels de la fenêtre
 %define HAUTEUR 400	; hauteur en pixels de la fenêtre
@@ -111,44 +111,83 @@ random_range:
     ret
 
 ;##################################################
-;########### FONCTION GENERER_TRIANGLE ############
+;########### FONCTION GENERER_TRIANGLES ###########
 ;##################################################
-; Génère les coordonnées aléatoires du triangle
+; Génère les coordonnées aléatoires de NBTRI triangles
 
-generer_triangle:
+generer_triangles:
     push rbp
     mov rbp, rsp
+    push r12        ; compteur
+    push r13        ; adresse de base
     
-    ; Génère x1
+    xor r12, r12    ; compteur de triangles a 0
+    
+.loop_triangles:
+    cmp r12, NBTRI
+    jge .fin        ; Si r12 >= NBTRI on arrete
+    
+    ; === Génère 1 pour le triangle r12 ===
     mov edi, LARGEUR - 1
     call random_range
-    mov [triangle_x1], eax
+    ; Calcule l'adresse : triangles_x1 + (r12 * 4)
+    lea r13, [triangles_x1]     ; r13 = adresse de base
+    mov rcx, r12
+    shl rcx, 2                  ; rcx = r12 * 4 (décalage en octets)
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde x1[r12]
     
-    ; Génère y1
+    ; === Génère y1 pour le triangle r12 ===
     mov edi, HAUTEUR - 1
     call random_range
-    mov [triangle_y1], eax
+    lea r13, [triangles_y1]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde y1[r12]
     
-    ; Génère x2
+    ; === Génère x2 pour le triangle r12 ===
     mov edi, LARGEUR - 1
     call random_range
-    mov [triangle_x2], eax
+    lea r13, [triangles_x2]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde x2[r12]
     
-    ; Génère y2
+    ; === Génère y2 pour le triangle r12 ===
     mov edi, HAUTEUR - 1
     call random_range
-    mov [triangle_y2], eax
+    lea r13, [triangles_y2]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde y2[r12]
     
-    ; Génère x3
+    ; === Génère x3 pour le triangle r12 ===
     mov edi, LARGEUR - 1
     call random_range
-    mov [triangle_x3], eax
+    lea r13, [triangles_x3]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde x3[r12]
     
-    ; Génère y3
+    ; === Génère y3 pour le triangle r12 ===
     mov edi, HAUTEUR - 1
     call random_range
-    mov [triangle_y3], eax
+    lea r13, [triangles_y3]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov [r13], eax              ; Sauvegarde y3[r12]
     
+    inc r12
+    jmp .loop_triangles
+    
+.fin:
+    pop r13
+    pop r12
     pop rbp
     ret
 
@@ -191,6 +230,315 @@ calculer_orientation:
     sub rdx, rcx
     mov eax, edx        ; Résultat dans eax
     
+    ret
+
+;##################################################
+;########### FONCTION REMPLIR_TRIANGLE_I ##########
+;##################################################
+; Remplit le triangle d'indice i
+; Paramètre : R12D = indice du triangle (i)
+
+remplir_triangle_i:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 48
+    
+    ; Sauvegarde r12
+    mov [rbp-44], r12d
+    
+    ; === Charge les coordonnées du triangle i ===
+    ; x1[i]
+    lea rbx, [triangles_x1]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-24], eax   ; x1 stocké
+    
+    ; y1[i]
+    lea rbx, [triangles_y1]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-28], eax   ; y1 stocké
+    
+    ; x2[i]
+    lea rbx, [triangles_x2]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-32], eax   ; x2 stocké
+    
+    ; y2[i]
+    lea rbx, [triangles_y2]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-36], eax   ; y2 stocké
+    
+    ; x3[i]
+    lea rbx, [triangles_x3]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-40], eax   ; x3 stocké
+    
+    ; y3[i]
+    lea rbx, [triangles_y3]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-48], eax   ; y3 stocké (attention au signe!)
+    
+    ; === Calcule xmin, xmax, ymin, ymax ===
+    
+    ; ymin = min(y1, y2, y3)
+    mov eax, [rbp-28]   ; y1
+    mov ebx, [rbp-36]   ; y2
+    mov ecx, [rbp-48]   ; y3
+    cmp eax, ebx
+    cmovg eax, ebx      ; eax = min(y1, y2)
+    cmp eax, ecx
+    cmovg eax, ecx      ; eax = min(y1, y2, y3)
+    mov [rbp-4], eax    ; ymin
+    
+    ; ymax = max(y1, y2, y3)
+    mov eax, [rbp-28]   ; y1
+    mov ebx, [rbp-36]   ; y2
+    mov ecx, [rbp-48]   ; y3
+    cmp eax, ebx
+    cmovl eax, ebx      ; eax = max(y1, y2)
+    cmp eax, ecx
+    cmovl eax, ecx      ; eax = max(y1, y2, y3)
+    mov [rbp-8], eax    ; ymax
+    
+    ; xmin = min(x1, x2, x3)
+    mov eax, [rbp-24]   ; x1
+    mov ebx, [rbp-32]   ; x2
+    mov ecx, [rbp-40]   ; x3
+    cmp eax, ebx
+    cmovg eax, ebx
+    cmp eax, ecx
+    cmovg eax, ecx
+    mov [rbp-12], eax   ; xmin
+    
+    ; xmax = max(x1, x2, x3)
+    mov eax, [rbp-24]   ; x1
+    mov ebx, [rbp-32]   ; x2
+    mov ecx, [rbp-40]   ; x3
+    cmp eax, ebx
+    cmovl eax, ebx
+    cmp eax, ecx
+    cmovl eax, ecx
+    mov [rbp-16], eax   ; xmax
+    
+    ; === Boucle sur chaque pixel ===
+.loop_y:
+    mov eax, [rbp-4]    ; y actuel (commence à ymin)
+    cmp eax, [rbp-8]    ; compare à ymax
+    jg .fin
+    
+    mov [rbp-20], eax   ; Sauvegarde y actuel
+    mov ebx, [rbp-12]   ; x = xmin
+    
+.loop_x:
+    cmp ebx, [rbp-16]   ; compare x à xmax
+    jg .next_y
+    
+    ; === Teste si le point (ebx, [rbp-20]) est dans le triangle ===
+    
+    ; Orientation 1 : (x1,y1), (x2,y2), (px,py)
+    mov edi, [rbp-24]   ; x1
+    mov esi, [rbp-28]   ; y1
+    mov edx, [rbp-32]   ; x2
+    mov ecx, [rbp-36]   ; y2
+    mov r8d, ebx        ; px
+    mov r9d, [rbp-20]   ; py
+    push rbx
+    push rax
+    call calculer_orientation
+    mov r10d, eax       ; Sauvegarde orientation1
+    pop rax
+    pop rbx
+    
+    ; Orientation 2 : (x2,y2), (x3,y3), (px,py)
+    mov edi, [rbp-32]   ; x2
+    mov esi, [rbp-36]   ; y2
+    mov edx, [rbp-40]   ; x3
+    mov ecx, [rbp-48]   ; y3
+    mov r8d, ebx        ; px
+    mov r9d, [rbp-20]   ; py
+    push rbx
+    push rax
+    call calculer_orientation
+    mov r11d, eax       ; Sauvegarde orientation2
+    pop rax
+    pop rbx
+    
+    ; Vérifie que orientation1 et orientation2 ont le même signe
+    test r10d, r10d
+    js .orient1_negatif
+    test r11d, r11d
+    js .next_x
+    jmp .check_orient3
+.orient1_negatif:
+    test r11d, r11d
+    jns .next_x
+    
+.check_orient3:
+    ; Orientation 3 : (x3,y3), (x1,y1), (px,py)
+    mov edi, [rbp-40]   ; x3
+    mov esi, [rbp-48]   ; y3
+    mov edx, [rbp-24]   ; x1
+    mov ecx, [rbp-28]   ; y1
+    mov r8d, ebx        ; px
+    mov r9d, [rbp-20]   ; py
+    push rbx
+    push rax
+    call calculer_orientation
+    mov r10d, eax
+    pop rax
+    pop rbx
+    
+    ; Vérifie le signe avec orientation2
+    test r11d, r11d
+    js .orient2_negatif
+    test r10d, r10d
+    js .next_x
+    jmp .dessiner_point
+.orient2_negatif:
+    test r10d, r10d
+    jns .next_x
+    
+.dessiner_point:
+    ; Dessine le point (ebx, [rbp-20])
+    push rbx
+    push rax
+    mov rdi, qword[display_name]
+    mov rsi, qword[window]
+    mov rdx, qword[gc]
+    mov ecx, ebx
+    mov r8d, [rbp-20]
+    call XDrawPoint
+    pop rax
+    pop rbx
+    
+.next_x:
+    inc ebx
+    jmp .loop_x
+    
+.next_y:
+    inc dword[rbp-4]    ; ymin++
+    jmp .loop_y
+    
+.fin:
+    add rsp, 48
+    pop rbp
+    ret
+
+;##################################################
+;########### FONCTION DESSINER_CONTOURS_I #########
+;##################################################
+; Dessine les contours du triangle d'indice i
+; Paramètre : R12D = indice du triangle (i)
+
+dessiner_contours_triangle_i:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    
+    ; Sauvegarde r12
+    mov [rbp-4], r12d
+    
+    ; === Charge les coordonnées du triangle i ===
+    ; x1[i]
+    lea rbx, [triangles_x1]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-8], eax
+    
+    ; y1[i]
+    lea rbx, [triangles_y1]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-12], eax
+    
+    ; x2[i]
+    lea rbx, [triangles_x2]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-16], eax
+    
+    ; y2[i]
+    lea rbx, [triangles_y2]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-20], eax
+    
+    ; x3[i]
+    lea rbx, [triangles_x3]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-24], eax
+    
+    ; y3[i]
+    lea rbx, [triangles_y3]
+    mov ecx, r12d
+    shl ecx, 2
+    add rbx, rcx
+    mov eax, [rbx]
+    mov [rbp-28], eax
+    
+    ; === Dessine le côté 1 : (x1,y1) -> (x2,y2) ===
+    mov rdi, qword[display_name]
+    mov rsi, qword[window]
+    mov rdx, qword[gc]
+    mov ecx, [rbp-8]    ; x1
+    mov r8d, [rbp-12]   ; y1
+    mov r9d, [rbp-16]   ; x2
+    push qword[rbp-20]  ; y2
+    call XDrawLine
+    add rsp, 8
+    
+    ; === Dessine le côté 2 : (x2,y2) -> (x3,y3) ===
+    mov rdi, qword[display_name]
+    mov rsi, qword[window]
+    mov rdx, qword[gc]
+    mov ecx, [rbp-16]   ; x2
+    mov r8d, [rbp-20]   ; y2
+    mov r9d, [rbp-24]   ; x3
+    push qword[rbp-28]  ; y3
+    call XDrawLine
+    add rsp, 8
+    
+    ; === Dessine le côté 3 : (x3,y3) -> (x1,y1) ===
+    mov rdi, qword[display_name]
+    mov rsi, qword[window]
+    mov rdx, qword[gc]
+    mov ecx, [rbp-24]   ; x3
+    mov r8d, [rbp-28]   ; y3
+    mov r9d, [rbp-8]    ; x1
+    push qword[rbp-12]  ; y1
+    call XDrawLine
+    add rsp, 8
+    
+    add rsp, 32
+    pop rbp
     ret
 
 ;##################################################
@@ -396,62 +744,53 @@ remplir_triangle:
     ret         ; Retour
 
 ;##################################################
-;########### FONCTION DESSINER_TRIANGLE ###########
+;########### FONCTION DESSINER_TRIANGLES ##########
 ;##################################################
-dessiner_triangle:
+; Dessine tous les triangles avec leurs couleurs
+
+dessiner_triangles:
     push rbp
     mov rbp, rsp
+    push r12
+    push r13
     
-    ; Remplit le triangle en noir
+    xor r12, r12        ; compteur
+    
+.loop_triangles:
+    cmp r12, NBTRI
+    jge .fin
+    
+    ; === Charge la couleur du triangle i ===
+    lea r13, [couleurs]
+    mov rcx, r12
+    shl rcx, 2
+    add r13, rcx
+    mov r14d, [r13]     ; r14d = couleur[i]
+    
+    ; === change la couleur ===
     mov rdi, qword[display_name]
     mov rsi, qword[gc]
-    mov edx, 0xFFFFFF  ; Blanc
+    mov edx, r14d
     call XSetForeground
     
-    call remplir_triangle
+    ; === Remplit le triangle i ===
+    call remplir_triangle_i
     
-    ; Change la couleur pour les contours en rouge
+    ; === Change la couleur de contour ===
     mov rdi, qword[display_name]
     mov rsi, qword[gc]
-    mov edx, 0xFF0000  ; Rouge
+    mov edx, 0x000000   ; Noir
     call XSetForeground
     
-    ; Dessine le côté 1 : (x1,y1) -> (x2,y2)
-    mov rdi, qword[display_name]
-    mov rsi, qword[window]
-    mov rdx, qword[gc]
-    mov ecx, dword[triangle_x1]
-    mov r8d, dword[triangle_y1]
-    mov r9d, dword[triangle_x2]
-    mov r14d, dword[triangle_y2]
-    push r14
-    call XDrawLine
-    add rsp, 8
+    ; === Dessine les contours du triangle i ===
+    call dessiner_contours_triangle_i
     
-    ; Dessine le côté 2 : (x2,y2) -> (x3,y3)
-    mov rdi, qword[display_name]
-    mov rsi, qword[window]
-    mov rdx, qword[gc]
-    mov ecx, dword[triangle_x2]
-    mov r8d, dword[triangle_y2]
-    mov r9d, dword[triangle_x3]
-    mov r14d, dword[triangle_y3]
-    push r14
-    call XDrawLine
-    add rsp, 8
+    inc r12
+    jmp .loop_triangles
     
-    ; Dessine le côté 3 : (x3,y3) -> (x1,y1)
-    mov rdi, qword[display_name]
-    mov rsi, qword[window]
-    mov rdx, qword[gc]
-    mov ecx, dword[triangle_x3]
-    mov r8d, dword[triangle_y3]
-    mov r9d, dword[triangle_x1]
-    mov r14d, dword[triangle_y1]
-    push r14
-    call XDrawLine
-    add rsp, 8
-    
+.fin:
+    pop r13
+    pop r12
     pop rbp
     ret
 
@@ -545,17 +884,17 @@ boucle: ; Boucle de gestion des événements
 ;#		DEBUT DE LA ZONE DE DESSIN		 #
 ;#########################################
 dessin:
-    ; Vérifie si le triangle a déjà été généré
-    cmp dword[triangle_genere], 0
+    ; Vérifie si les triangles ont déjà été générés
+    cmp dword[triangles_generes], 0
     jne .deja_genere
     
-    ; Génère les coordonnées du triangle (une seule fois)
-    call generer_triangle
-    mov dword[triangle_genere], 1
+    ; Génère les coordonnées des triangles (une seule fois)
+    call generer_triangles
+    mov dword[triangles_generes], 1
     
 .deja_genere:
-    ; Dessine le triangle (à chaque fois)
-    call dessiner_triangle
+    ; Dessine tous les triangles (à chaque fois)
+    call dessiner_triangles
 
 flush:
     mov rdi,qword[display_name]

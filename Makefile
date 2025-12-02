@@ -3,7 +3,7 @@ CC = gcc
 NASM_FLAGS = -f elf64 -g
 LD_FLAGS = -no-pie -lX11
 
-all: mathieu raphael
+all: mathieu raphael eliott
 
 # Mathieu - Étape 2 : Triangle rempli avec X11
 mathieu: mathieu_etape_2
@@ -31,7 +31,20 @@ diondi.o: diondi.asm
 run-raphael: diondi
 	./diondi
 
+# eliott - Étape 3 : Plusieurs triangles avec couleurs fixes
+eliott: eliott_etape_3
+	@echo "Build eliott_etape_3 terminé. Lancez avec: make run-eliott"
+
+eliott_etape_3: eliott_etape_3.o
+	$(CC) -o eliott_etape_3 eliott_etape_3.o $(LD_FLAGS)
+
+eliott_etape_3.o: eliott_etape_3.asm
+	$(NASM) $(NASM_FLAGS) eliott_etape_3.asm
+
+run-eliott: eliott_etape_3
+	./eliott_etape_3
+
 clean:
 	rm -f *.o mathieu_etape_2 diondi
 
-.PHONY: all clean mathieu raphael run-mathieu run-raphael
+.PHONY: all clean mathieu raphael eliott run-mathieu run-raphael run-eliott
